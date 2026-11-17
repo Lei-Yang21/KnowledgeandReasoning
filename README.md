@@ -23,6 +23,12 @@ Netflix CSV -> PostgreSQL -> R2RML mapping -> RDF -> Fuseki / SPARQL
 - **Querying and documentation:** Fuseki serves the RDF dataset through SPARQL.
   The ontology documentation and WebVOWL graph explain its classes and relationships.
 
+### Ontology Diagram
+
+![Ontology diagram showing the catalog classes and their relationships](docs/ontology.svg)
+
+Open the [full-size diagram](docs/ontology.svg) to zoom in.
+
 ## Quick Start
 
 Install and start [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/)
