@@ -1,6 +1,159 @@
 # Show Catalog Ontology and Information System
 
-This project was developed as part of the Knowledge Representation and Reasoning course. It provides a solution to enhance the search for movies and TV shows on streaming platforms by integrating a relational database with an ontology. The system maps data from a PostgreSQL database (sourced from Kaggle’s Netflix Movies and TV Shows dataset) onto an OWL 2 QL ontology and demonstrates how to deploy and query the resulting RDF data using SPARQL.
+A movie and TV show catalog developed for the Knowledge Representation and
+Reasoning course. The project combines a PostgreSQL database built from the
+Netflix Movies and TV Shows dataset with an OWL 2 QL ontology, converts relational
+data into RDF, and supports searches through SPARQL.
+
+## Project Overview
+
+The data flows through four stages:
+
+```text
+Netflix CSV -> PostgreSQL -> R2RML mapping -> RDF -> Fuseki / SPARQL
+```
+
+- **Data preparation:** a Python notebook cleans the source dataset and splits
+  it into CSV tables for shows, people, countries, genres, ratings, and their relationships.
+- **Relational database:** the import script creates PostgreSQL tables and loads
+  the prepared CSV files.
+- **Ontology and mapping:** the ontology defines concepts such as Show, Movie,
+  Series, Person, Actor, and Director. R2RML maps SQL data to RDF resources and
+  relationships, including people who participated in the same show.
+- **Querying and documentation:** Fuseki serves the RDF dataset through SPARQL.
+  The ontology documentation and WebVOWL graph explain its classes and relationships.
+
+## Quick Start
+
+Install and start [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/)
+with the Linux container engine. Docker provides Python, Java, PostgreSQL, and
+Fuseki inside containers; these tools do not need separate local installations.
+
+From the project directory, run:
+
+```powershell
+docker compose up --build --wait
+```
+
+The first run downloads the images and Apache Jena Fuseki 6.2.0, verifies its
+SHA-512 checksum, imports the prepared CSV files into PostgreSQL, and generates
+RDF using the mapping. It then starts Fuseki and the documentation server in the
+background and waits for the services to respond. CSV preprocessing is already
+done; the preprocessing notebook is available for exploring the source data.
+
+Allow several minutes and an Internet connection for the first run. Local ports
+**5432**, **3030**, and **8000** must be available. Services listen only on this machine.
+
+## Usage
+
+| Service | Address |
+| --- | --- |
+| Fuseki SPARQL interface | [localhost:3030](http://localhost:3030/) |
+| SPARQL endpoint | [localhost:3030/ds/query](http://localhost:3030/ds/query) |
+| Ontology documentation | [localhost:8000/index-en.html](http://localhost:8000/index-en.html) |
+| WebVOWL graph | [localhost:8000/webvowl/index.html](http://localhost:8000/webvowl/index.html) |
+
+Open Fuseki, select the `/ds` dataset, and paste a query from
+[SPARQL.ipynb](submit/SPARQL.ipynb). The six examples cover retrieving a title,
+filtering by release year or duration, aggregating movies by country, and finding
+movies through relationships between participants.
+
+For example, this query returns movie titles and durations over 90 minutes:
+
+```sparql
+PREFIX show: <http://ontology.show-catalog.org/show#>
+
+SELECT ?title ?duration
+WHERE {
+  ?movie a show:Movie ;
+         show:name ?title ;
+         show:duration ?duration .
+  FILTER (?duration > 90)
+}
+LIMIT 100
+```
+
+For direct SQL access, PostgreSQL is available at `localhost:5432`, with database
+`show_catalog`, user `postgres`, and local development password
+`show_catalog_local`. These settings are defined in [compose.yaml](compose.yaml).
+The SQL examples in `submit/Database/requestSQL.ipynb` need their connection settings
+adjusted to this database before use.
+
+## Managing the Local Setup
+
+Use the Quick Start command again to relaunch the project or rebuild it after
+code or mapping changes. PostgreSQL data and the generated RDF are stored in
+Docker volumes. The original submitted export, `submit/output.ttl`, is preserved.
+
+On startup, `scripts/prepare.py` checks row counts in all ten SQL tables. It imports
+the CSV files only when the tables are empty and skips the import when counts
+already match. A partially populated database or different CSV row counts cause
+an explicit error without deleting existing data. Row-count checks do not detect
+content changes that leave counts unchanged; dataset changes require an explicit
+migration.
+
+Stop the services while keeping their data:
+
+```powershell
+docker compose down
+```
+
+Inspect service status and logs:
+
+```powershell
+docker compose ps -a
+docker compose logs --tail=100 prepare fuseki
+```
+
+The `prepare` service exits successfully after generating the RDF; PostgreSQL,
+Fuseki, and the documentation server keep running. If ports are occupied by an
+older manual setup, stop those services before starting Compose. This configuration
+is intended for local development.
+
+## Original Ubuntu Deployment
+
+The original project used Ubuntu 22.04.4, OpenJDK 17.0.10, PostgreSQL, Fuseki,
+Pubby, Jetty, and Apache2. The following instructions document that deployment.
+The Docker setup above uses Java 21 and provides Fuseki and static ontology
+documentation. Pubby is separate, and its supplied configuration still targets
+DBpedia; adapt it to the catalog endpoint and resource URIs before use.
+
+### SPARQL Endpoint
+
+Add `127.0.0.1 data.show-catalog.org` to `/etc/hosts`, start Fuseki with
+`./fuseki-server`, create a dataset named `ds`, and upload `submit/output.ttl`.
+
+### Linked Data Frontend
+
+Build Pubby:
+
+```bash
+mvn package -DskipTests -Dmaven.javadoc.skip=true
+```
+
+Replace `./target/pubby/WEB-INF/config.ttl` with the adapted
+`submit/Deployment/config.ttl`. Rename the built Pubby directory to `ROOT`, copy
+it into Jetty's `webapps` directory, and start Jetty:
+
+```bash
+java -jar start.jar
+```
+
+### Ontology Documentation
+
+Add `127.0.0.1 ontology.show-catalog.org` to `/etc/hosts`. Copy
+`submit/Deployment/show/` into `/var/www/` and
+`submit/Deployment/ontology.conf` into `/etc/apache2/sites-available/`, then run:
+
+```bash
+sudo a2ensite ontology.conf
+sudo systemctl reload apache2
+```
+
+Documentation can be regenerated with Widoco. With this deployment configured,
+the ontology documentation is available at
+[ontology.show-catalog.org/show](http://ontology.show-catalog.org/show), and the
+linked data frontend at [data.show-catalog.org](http://data.show-catalog.org).
 
 ## Authors
 
@@ -8,95 +161,7 @@ This project was developed as part of the Knowledge Representation and Reasoning
 - **Lei Yang** (s201670)
 - **Bruce Andriamampianina** (s2302253)
 
-*May 20, 2024*
-
-## Project Overview
-
-The project is divided into several key parts:
-
-- **Database Design:**  
-  A conceptual relational database schema was designed based on Bansal Shivam’s Netflix dataset. The schema includes multiple entities (e.g., Show, Person, Country, Genre) and relations that allow efficient filtering of shows based on criteria like genre, rating, and production country.
-
-- **Ontology Development:**  
-  An ontology was created using the OWL 2 QL profile. This choice was motivated by the need for computational efficiency while integrating with the relational database. The ontology defines classes for shows, persons (with specific sub-classes for Actor and Director), and other related entities.
-
-- **Mapping to RDF:**  
-  A mapping process converts relational data into RDF triples. This process involves generating triples maps for each table and addressing challenges such as handling multiple roles (actor/director) and managing complex join queries.
-
-- **Deployment and Demonstration:**  
-  The system is deployed using multiple components:
-  - **SPARQL Endpoint:** Apache Jena Fuseki for hosting RDF data.
-  - **Linked Data Frontend:** Pubby for visualizing linked data.
-  - **Web Server:** Jetty for serving the frontend.
-  - Additional instructions are provided for integrating with an Apache2 Web server (LAMP stack) and generating documentation with Widoco.
-
-- **SPARQL Queries:**  
-  Several example queries are provided to demonstrate how to search the RDF data:
-  - A simple query for movies with a duration over 90 minutes.
-  - A join query to list movies featuring a specific actor.
-  - Aggregate queries to count movies produced per country.
-  - A more advanced query demonstrating how new relationships (e.g., using the `knows` property) can be queried.
-
-## Installation and Deployment
-
-### Prerequisites
-- **Operating System:** Ubuntu 22.04.4
-- **Java:** OpenJDK 17.0.10
-- **Database:** PostgreSQL
-- **Web Servers:** Apache Jena Fuseki, Jetty, Apache2 (LAMP stack)
-
-### Deployment Steps
-
-1. **Deploying the SPARQL Endpoint (Apache Jena Fuseki):**
-   - Update your `/etc/hosts` file with:  
-     `127.0.0.1 data.show-catalog.org`
-   - Run the Fuseki server with `./fuseki-server`
-   - Create a new dataset (e.g., `ds`) and upload the RDF data from `output.ttl`.
-
-2. **Setting Up the Linked Data Frontend (Pubby):**
-   - Build Pubby using Maven:  
-     `mvn package -DskipTests -Dmaven.javadoc.skip=true`
-   - Replace the default configuration (`./target/pubby/WEB-INF/config.ttl`) with the provided `config.ttl`.
-   - Rename the Pubby folder to `ROOT` and copy it to the Jetty `webapps` directory.
-   - Run Jetty using:  
-     `java -jar start.jar`
-
-3. **Configuring Apache2 Web Server:**
-   - Add the following line to `/etc/hosts`:  
-     `127.0.0.1 ontology.show-catalog.org`
-   - Place the provided `show/` folder into `/var/www/`
-   - Add the `ontology.conf` file to `/etc/apache2/sites-available/`
-   - Enable the site with:  
-     `sudo a2ensite ontology.conf`
-   - Reload Apache2:  
-     `sudo systemctl reload apache2`
-
-4. **Documentation Generation:**
-   - Documentation can be generated using Widoco.
-
-## Usage
-
-Once deployed, users can access:
-- **Ontology Documentation:** [http://ontology.show-catalog.org/show](http://ontology.show-catalog.org/show)
-- **Linked Data Interface:** [http://data.show-catalog.org](http://data.show-catalog.org)
-
-SPARQL queries can be run either through a SPARQL client or within the provided notebook (`SPARQL.ipynb`), which demonstrates:
-- Filtering shows by duration
-- Joining data to retrieve movies featuring a specific actor (e.g., "Tom Holland")
-- Aggregating counts by production country
-- More complex queries that illustrate relationships beyond the original database design
-
-## Project Structure
-
-- **Database Schema:** Conceptual design and normalization details.
-- **Ontology Files:** OWL 2 QL based ontology definitions and schema diagrams.
-- **Mapping Scripts:** SQL queries and mappings for converting relational data to RDF.
-- **Deployment Configurations:** Configuration files for Apache Jena Fuseki, Pubby, Jetty, and Apache2.
-- **SPARQL Queries:** Sample queries included in `SPARQL.ipynb`.
-
-## Conclusion
-
-This project demonstrates a comprehensive approach to integrating a relational database with an ontology to facilitate more effective search and filtering of movies and TV shows. The solution leverages efficient OWL 2 QL mappings, robust deployment strategies, and SPARQL querying to create a versatile information system. Future work could include integrating additional datasets to further enrich the database and enhance the system’s capabilities.
+Original course project: May 20, 2024.
 
 ## References
 

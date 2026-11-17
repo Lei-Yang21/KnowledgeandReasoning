@@ -184,7 +184,7 @@
             FROM 
                 show s
             WHERE 
-                s.type = 'TV Show'
+                s.type_show = 'TV Show'
         """
     ] ;
     rr:subjectMap [
@@ -210,7 +210,7 @@
             FROM 
                 show s
             WHERE 
-                s.type = 'Movie'
+                s.type_show = 'Movie'
         """
     ] ;
     rr:subjectMap [

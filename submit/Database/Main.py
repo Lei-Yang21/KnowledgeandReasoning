@@ -1,8 +1,18 @@
 import psycopg2
 from psycopg2 import sql
 import csv
+import os
+from pathlib import Path
 
-connect = psycopg2.connect(host="localhost",dbname = "postgres", user = "postgres", password = "210901", port = 5432)
+data_dir = Path(__file__).resolve().parent
+connect = psycopg2.connect(
+    host=os.environ.get("PGHOST", "localhost"),
+    dbname=os.environ.get("PGDATABASE", "postgres"),
+    user=os.environ.get("PGUSER", "postgres"),
+    password=os.environ.get("PGPASSWORD", "210901"),
+    port=os.environ.get("PGPORT", "5432"),
+    connect_timeout=10,
+)
 
 cur = connect.cursor()
 
@@ -95,7 +105,7 @@ cur.execute(""" CREATE TABLE IF NOT EXISTS genresof(
             """)
 
 
-person = "person.csv"
+person = data_dir / "person.csv"
 
 with open(person, "r", encoding="utf8") as f :
     reader = csv.reader(f)
@@ -107,7 +117,7 @@ with open(person, "r", encoding="utf8") as f :
         cur.execute(""" INSERT INTO person (person_id,firstname,lastname) VALUES (%s,%s,%s)""",(id,firstname,lastname))
 f.close()
 
-country = "country.csv"
+country = data_dir / "country.csv"
 
 with open(country, "r", encoding="utf8") as f :
     reader = csv.reader(f)
@@ -118,7 +128,7 @@ with open(country, "r", encoding="utf8") as f :
         cur.execute(""" INSERT INTO country (country_name,country_id) VALUES (%s,%s)""",(name,id))
 f.close()
 
-rating = "rating.csv"
+rating = data_dir / "rating.csv"
 
 with open(rating, "r", encoding="utf8") as f :
     reader = csv.reader(f)
@@ -129,7 +139,7 @@ with open(rating, "r", encoding="utf8") as f :
         cur.execute(""" INSERT INTO rating (rating_name,rating_id) VALUES (%s,%s)""",(name,id))
 f.close()
 
-show = "show.csv"
+show = data_dir / "show.csv"
 
 with open(show, "r", encoding="utf8") as f :
     reader = csv.reader(f)
@@ -145,7 +155,7 @@ with open(show, "r", encoding="utf8") as f :
         cur.execute(""" INSERT INTO show (show_id,title,description_film,duration,type_show,release_date,date_added) VALUES (%s,%s,%s,%s,%s,%s,%s)""",(id,title,description,duration,type_show,release_date,date_added))
 f.close()
 
-rated = "rated.csv"
+rated = data_dir / "rated.csv"
 
 with open(rated, "r", encoding="utf8") as f :
     reader = csv.reader(f)
@@ -156,7 +166,7 @@ with open(rated, "r", encoding="utf8") as f :
         cur.execute(""" INSERT INTO rated (show_id,rating_id) VALUES (%s,%s)""",(show_id,rating_id))
 f.close()
 
-filmed_in = "produced.csv"
+filmed_in = data_dir / "produced.csv"
 
 with open(filmed_in, "r", encoding="utf8") as f :
     reader = csv.reader(f)
@@ -167,7 +177,7 @@ with open(filmed_in, "r", encoding="utf8") as f :
         cur.execute(""" INSERT INTO filmed_in (show_id,country_id) VALUES (%s,%s)""",(show_id,country_id))
 f.close()
 
-directed_by = "director.csv"
+directed_by = data_dir / "director.csv"
 
 with open(directed_by, "r", encoding="utf8") as f :
     reader = csv.reader(f)
@@ -178,7 +188,7 @@ with open(directed_by, "r", encoding="utf8") as f :
         cur.execute(""" INSERT INTO directed_by (show_id,person_id) VALUES (%s,%s)""",(show_id,person_id))
 f.close()
 
-acted_in = "actor.csv"
+acted_in = data_dir / "actor.csv"
 
 with open(acted_in, "r", encoding="utf8") as f :
     reader = csv.reader(f)
@@ -189,7 +199,7 @@ with open(acted_in, "r", encoding="utf8") as f :
         cur.execute(""" INSERT INTO acted_in (show_id,person_id) VALUES (%s,%s)""",(show_id,person_id))
 f.close()
 
-genre = "genre.csv"
+genre = data_dir / "genre.csv"
 
 with open(genre, "r", encoding="utf8") as f :
     reader = csv.reader(f)
@@ -200,7 +210,7 @@ with open(genre, "r", encoding="utf8") as f :
         cur.execute(""" INSERT INTO genre (genre_name,genre_id) VALUES (%s,%s)""",(name,id))
 f.close()
 
-genresof = "belong.csv"
+genresof = data_dir / "belong.csv"
 
 with open(genresof, "r", encoding="utf8") as f :
     reader = csv.reader(f)

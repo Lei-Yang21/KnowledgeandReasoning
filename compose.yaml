@@ -1,0 +1,67 @@
+name: show-catalog
+
+x-runtime: &runtime
+  build: .
+  environment:
+    PGHOST: postgres
+    PGDATABASE: show_catalog
+    PGUSER: postgres
+    PGPASSWORD: show_catalog_local
+
+services:
+  postgres:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_DB: show_catalog
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: show_catalog_local
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d show_catalog"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  prepare:
+    <<: *runtime
+    command: ["python3", "scripts/prepare.py"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - rdf-data:/data
+
+  fuseki:
+    <<: *runtime
+    command: ["java", "-Xmx2g", "-jar", "/opt/fuseki/fuseki-server.jar", "--shiro=/opt/fuseki/shiro-local.ini", "--file=/data/output.ttl", "/ds"]
+    depends_on:
+      prepare:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:3030:3030"
+    volumes:
+      - rdf-data:/data:ro
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3030/ds/query?query=ASK%7B?s%20?p%20?o%7D', timeout=5).read()"]
+      interval: 5s
+      timeout: 10s
+      start_period: 15s
+      retries: 30
+
+  docs:
+    <<: *runtime
+    command: ["python3", "-m", "http.server", "8000", "--directory", "submit/Deployment/show"]
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/index-en.html', timeout=5).read()"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+volumes:
+  postgres-data:
+  rdf-data:

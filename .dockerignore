@@ -1,0 +1,15 @@
+**
+!Dockerfile
+!r2rml.jar
+!dependency/
+!dependency/**
+!submit/
+!submit/Database/
+!submit/Database/**
+!submit/mapping.ttl
+!submit/SPARQL.ipynb
+!submit/Deployment/
+!submit/Deployment/show/
+!submit/Deployment/show/**
+!scripts/
+!scripts/*.py
