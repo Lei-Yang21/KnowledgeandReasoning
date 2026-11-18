@@ -176,3 +176,39 @@ Original course project: May 20, 2024.
 - Steffen Lohmann et al. *WebVOWL: Web-based Visualization of Ontologies*, Knowledge Engineering and Knowledge Management, 2015.
 - OWL Working Group. *OWL 2 QL*, 2009. [Link](https://www.w3.org/TR/2009/WD-owl2-new-features-20090421/#OWL_2_QL)
 - Bansal Shivam. *Netflix Movies and TV Shows*, 2022. [Link](https://www.kaggle.com/datasets/shivamb/netflix-shows/data)
+
+## Additional Features
+
+The [query performance notebook](new_features/query_performance.ipynb) compares
+SQL and SPARQL on movie searches and paths connecting Tom Holland to Brad Pitt
+through one or three intermediaries. All queries are embedded in the notebook,
+alongside repeated measurements and validation against the source data.
+
+SPARQL expresses these connections through compact graph patterns, making
+relationship queries easier to write without explicit table joins. Local
+benchmarks also show faster responses for the deeper actor-connection query.
+Open the notebook in Jupyter or VS Code and select **Run All** after starting
+the local services to explore the examples and repeat the measurements.
+
+### Performance Results
+
+Results from 18 November 2026, using the median of five repetitions after the
+first measured execution:
+
+| Query | Results returned | SQL median (ms) | SPARQL median (ms) |
+| --- | ---: | ---: | ---: |
+| Movies longer than 90 minutes | 20 | 0.768 | 5.577 |
+| Tom Holland to Brad Pitt: one intermediary | 2 | 14.528 | 6.666 |
+| Tom Holland to Brad Pitt: three intermediaries | 20 | 165.724 | 18.123 |
+
+SPARQL was approximately **2.18 times faster** for the one-intermediary query
+and **9.14 times faster** for the three-intermediary query. SQL was faster for
+the simple movie-duration filter.
+
+Measurements include response transfer and decoding, with connections established
+before timing and caches left in place. Each result was checked against the source
+CSVs. Queries use `LIMIT 20` without `ORDER BY`, so the engines may return different
+valid subsets. These local measurements do not imply that either engine is always faster.
+
+The notebook also displays the first execution and the minimum and maximum
+repetition times.
